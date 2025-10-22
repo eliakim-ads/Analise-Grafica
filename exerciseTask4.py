@@ -46,9 +46,10 @@ df_total['Medicos'] = df_total['Semana_Num'].apply(medicos_por_semana)
 df_total['Capacidade_Semanal'] = df_total['Medicos'] * dias_uteis_semana * atendimentos_por_dia
 
 """
-Calcular Consultas_Extras corretamente: comparar por dia, depois agregar por semana
+Calcular Consultas_Extras: comparar por dia, depois agregar por semana
 pra isso precisamos da capacidade diária vigente na semana (medicos * atendimentos_por_dia)
 usamos df_long (dados por dia) e juntamos a lógica de medicos_por_semana
+
 """
 df_long['Medicos'] = df_long['Semana_Num'].apply(medicos_por_semana)
 df_long['Capacidade_Diaria'] = df_long['Medicos'] * atendimentos_por_dia
@@ -63,10 +64,8 @@ df_extras_semanais = df_long.groupby('Semana_Num')['Consultas_Extra_Dia'].sum().
 df_extras_semanais = df_extras_semanais.rename(columns={'Consultas_Extra_Dia': 'Consultas_Extras'})
 
 """
-Juntar os extras ao df_total (para semanas projetadas sem dados diários, usamos estimativa diária)
-Para semanas projetadas (17-32) não temos dia-a-dia real; vamos estimar extras usando a demanda projetada
-assumindo mesma distribuição diária média: comparar demanda semanal projetada com capacidade semanal
-porém, para manter coerência com a sua definição (excesso por dia), é preferível:
+Juntar os extras ao df_total: para semanas projetadas (17-32) não temos dia-a-dia real; vamos estimar extras usando a demanda projetada
+assumindo mesma distribuição diária média: comparar demanda semanal projetada com capacidade semanal.
 
 """
 df_total = df_total.merge(df_extras_semanais, on='Semana_Num', how='left')
@@ -76,13 +75,13 @@ mask_proj = df_total['Consultas_Extras'].isna()
 df_total.loc[mask_proj, 'Consultas_Extras'] = np.where(
     df_total.loc[mask_proj, 'Consultas'] > df_total.loc[mask_proj, 'Capacidade_Semanal'],
     df_total.loc[mask_proj, 'Consultas'] - df_total.loc[mask_proj, 'Capacidade_Semanal'],
-    0
-)
+    0)
 
 # para segurança arredondar/convertar pra inteiro (NOVO)
 df_total['Consultas_Extras'] = df_total['Consultas_Extras'].round(0).astype(int)
 
-# Reelaboração dos Graficos
+
+# elaboração dos Graficos
 
 # Tendência (reais 1-16) + projeção (17-32) — mantendo a tendência desde a semana 1 (NOVO)
 plt.figure(figsize=(10, 6))
@@ -137,3 +136,4 @@ total_extra_proj = df_total[df_total['Semana_Num'] >= 17]['Consultas_Extras'].su
 print(f"\nTotal Extras (1–16, reais, agregado diário): {total_extra_real}")
 print(f"Total Extras (17–32, projetados, estimativa agregada): {total_extra_proj}")
 print(f"Total Geral Extras (1–32): {total_extra_real + total_extra_proj}")
+
